@@ -51,14 +51,11 @@ let sem phrase = match phrase.sem with
 
 (* Errors *)
 
-let warn at m = prerr_endline (string_of_region at ^ ": warning: " ^ m)
-
 let error at m = raise (Error (at, m))
 
 let rec count_newlines i s =
   if i == String.length s then 0
   else (if s.[i] == '\n' then 1 else 0) + count_newlines (i + 1) s
-
 let indent s =
   let s' = String.make (String.length s + 2 * count_newlines 0 s + 2) ' ' in
   let i = ref 0 in

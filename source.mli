@@ -32,6 +32,5 @@ val at : ('a, 'b) phrase -> region
 val it : ('a, 'b) phrase -> 'a
 val sem : ('a, 'b) phrase -> 'b
 
-val warn : region -> string -> unit
 val error : region -> string -> 'a  (* raises Error *)
 val indent : string -> string

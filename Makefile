@@ -4,15 +4,12 @@
 
 NAME = 1ml
 MODULES = \
-  lib source prim syntax parser lexer \
-  fomega types iL env erase trace sub elab \
-  lambda compile \
+  source prim syntax parser lexer \
+  fomega types elab \
   main
-NOMLI = syntax iL main
+NOMLI = prim syntax fomega types elab main
 PARSERS = parser
 LEXERS = lexer
-SAMPLES = prelude paper
-TEXTS = README
 
 MLS = $(MODULES:%=%.ml)
 MLIS = $(filter-out $(NOMLI:%=%.mli), $(MODULES:%=%.mli))
@@ -20,14 +17,12 @@ MLYS = $(PARSERS:%=%.mly)
 MLLS = $(LEXERS:%=%.mll)
 CMOS = $(MODULES:%=%.cmo)
 CMXS = $(MODULES:%=%.cmx)
-IMLS = $(SAMPLES:%=%.1ml)
-TXTS = $(TEXTS:%=%.txt)
 
-$(NAME): $(CMXS) Makefile
+$(NAME): $(CMOS) Makefile
+	ocamlc $(CMOS) -g -o $@
+
+$(NAME).opt: $(CMXS) Makefile
 	ocamlopt $(CMXS) -o $@
-
-unopt: $(CMOS) Makefile
-	ocamlc $(CMOS) -g -o $(NAME)
 
 $(filter-out $(NOMLI:%=%.cmo), $(CMOS)): %.cmo: %.cmi
 $(filter-out $(NOMLI:%=%.cmx), $(CMXS)): %.cmx: %.cmi
@@ -37,7 +32,7 @@ Makefile.depend: $(MLS) $(MLIS) Makefile
 
 -include Makefile.depend
 
-zip: $(MLS) $(MLIS) $(MLYS) $(MLLS) Makefile $(IMLS) $(TXTS)
+zip: $(MLS) $(MLIS) $(MLYS) $(MLLS) Makefile
 	mkdir tmp tmp/$(NAME)
 	cp $^ tmp/$(NAME)
 	rm -f $(NAME).zip
