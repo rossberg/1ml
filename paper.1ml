@@ -1,0 +1,243 @@
+;; Examples from the 1ML paper
+;; (assumes prelude.1ml)
+;;
+;; Note: This is assuming full 1ML, so unlike in the first part of the paper,
+;; explicit type parameters must be annotated as 'type'.
+
+;; Section 2: 1ML with Explicit Types
+
+;; Functional Core
+
+application  = (fun (n : int) => n + n) 3;
+expanded     = let f = fun (n : int) => n + n; x = 3 in f x;
+moreexpanded = {f = fun (n : int) => n + n; x = 3; body = f x}.body;
+
+;; Reified Types
+
+identity = fun (a : type) => fun (x : a) => x;
+pair = fun (a : type) => fun (b : type) => type {fst : a; snd : b};
+second = fun (a : type) => fun (b : type) => fun (p : pair a b) => p.snd;
+
+identity (a : type) (x : a) = x;
+type pair a b = {fst : a; snd : b};
+second (a : type) (b : type) (p : pair a b) = p.snd;
+
+;; Translucency
+
+M =
+{
+  type size = int;
+  type pair a b = {fst : a; snd : b}
+};
+
+M_opaque = M :
+{
+  size : type;
+  pair : (a : type) => (b : type) => type
+};
+
+M_transparent = M :
+{
+  size : (= type int);
+  pair : (a : type) => (b : type) => (= type {fst : a; snd : b})
+};
+
+M_opaque = M :
+{
+  type size;
+  type pair a b;
+};
+
+M_transparent = M :
+{
+  type size = int;
+  type pair a b = {fst : a; snd : b};
+};
+
+;; Functors
+
+type EQ =
+{
+  type t;
+  eq : t -> t -> bool;
+};
+
+type MAP =
+{
+  type key;
+  type map a;
+  empty (a : type) : map a;
+  add (a : type) : key -> a -> map a -> map a;
+  lookup (a : type) : key -> map a -> opt a;
+};
+
+Map (Key : EQ) :> MAP with (type key = Key.t) =
+{
+  type key = Key.t;
+  type map a = key -> opt a;
+  empty (a : type) = fun (k : key) => none;
+  lookup (a : type) (k : key) (m : map a) = m k;
+  add (a : type) (k : key) (v : a) (m : map a) =
+    fun (x : key) => if Key.eq x k then some v else m x : opt a
+};
+
+;; Applicative vs. Generative
+
+F = (fun (a : type) => type {x : a}) :> type => type;
+G = (fun (a : type) => type {x : a}) :> type -> type;
+H = fun (a : type) => (type {x : a} :> type);
+;; J = G :> type => type;  ;; ill-typed!
+
+;; Higher Polymorphism
+
+f (id : (a : type) => a -> a) = {x = id int 5; y = id bool true};
+
+type SHAPE = {type t; area : t -> int; v : t};
+volume (height : int) (s : SHAPE) = height * s.area (s.v);
+area ss = List.foldl ss 0 (fun a (wrap s : wrap SHAPE) => a + s.area (s.v));
+
+type COLL c =
+{
+  type key;
+  type val;
+  empty : c;
+  add : c -> key -> val -> c;
+  lookup : c -> key -> opt val;
+  keys : c -> list key
+};
+entries (c : type) (C : COLL c) (xs : c) : list (type (C.key, C.val)) =
+  List.map (C.keys xs) (fun (k : C.key) => (k, caseopt (C.lookup xs k) bot id));
+
+type MONAD (m : type => type) =
+{
+  return (a : type) : a -> m a;
+  bind (a : type) (b : type) : m a -> (a -> m b) -> m b
+};
+map (a : type) (b : type) (m : type => type) (M : MONAD m) (f : a -> b) (mx : m a) =
+  M.bind a b mx (fun (x : a) => M.return b (f x));  ;; : m b
+
+;; ...the same with implicit types:
+type MONAD (m : type => type) =
+{
+  return 'a : a -> m a;
+  bind 'a 'b : m a -> (a -> m b) -> m b
+};
+map (m : type => type) (M : MONAD m) f mx =
+  M.bind mx (fun x => M.return (f x));
+
+;; Computed Modules
+
+pickTable (size : int) (threshold : int) (HashMap : MAP) (TreeMap : MAP) =
+{
+  Table = if size > threshold then HashMap else TreeMap : MAP
+};
+
+;; Predicativity
+
+type T1 = type;
+type T2 = {type u};
+type T3 = {type u = T2};
+type T4 = (x : {}) -> type;
+type T5 = (a : type) => {};
+type T6 = {type u a = bool};
+
+type Ti = T1;
+;; type U = pair Ti Ti;  ;; error
+;; A = (type Ti) : type;  ;; error
+;; B = {type u = Ti} :> {type u};  ;; error
+;; C = if true then Ti else int : type;  ;; error
+
+type T1' = (= type int);
+type T2' = {type u = int};
+
+type Ti = T2';
+type U = pair Ti Ti;
+A = (type Ti) : type;
+B = {type u = Ti} :> {type u};
+C = if true then Ti else int : type;
+
+
+;; Section 3: Type System and Elaboration
+;; 3.2 Elaboration
+
+;; Subtyping
+
+type MONSTER =
+  (= (fun (x : {}) => ({type t = int; v = 0} :> {type t; v : t}).v));
+;; Test (X : MONSTER) = X : MONSTER;  ;; error
+
+
+;; Section 4: Full 1ML
+
+SubtypingImplicitsWithTypeMatching =
+  fun (X : '(a : type) => {type t = a; f : a -> t}) =>
+       X : {type t; f : int -> int};
+
+type MAP =
+{
+  type key;
+  type map a;
+  empty 'a : map a;
+  lookup 'a : key -> map a -> opt a;
+  add 'a : key -> a -> map a -> map a
+};
+Map (Key : EQ) :> MAP with (type key = Key.t) =
+{
+  type key = Key.t;
+  type map a = key -> opt a;
+  empty = fun x => none;
+  lookup x m = m x;
+  add x y m = fun z => if Key.eq z x then some y else m z
+};
+
+FirstClassImplicit =
+  (fun (id : 'a  => a -> a) => {x = id 3; y = id true}) (fun x => x);
+
+
+;; Section 5: Inference
+;; 5.2 Incompleteness
+
+;; Type Scoping
+
+id : 'a => a -> a = fun x => x;
+G (x : int) = {M = {type t = int; v = x} :> {type t; v : t}; f = id id};
+C = G 3;
+;; x = C.f (C.M.v);  ;; error
+
+;; ...works with pure 'id' function:
+id = fun x => x;
+G (x : int) = {M = {type t = int; v = x} :> {type t; v : t}; f = id id};
+C = G 3;
+x = C.f (C.M.v);
+
+;; ...or with type annotation:
+id : 'a => a -> a = fun x => x;
+G (x : int) = {M = {type t = int; v = x} :> {type t; v : t}; f : M.t -> M.t = id id};
+C = G 3;
+x = C.f (C.M.v);
+
+;; ...or when applying G twice.
+id : 'a => a -> a = fun x => x;
+G (x : int) = {M = {type t = int; v = x} :> {type t; v : t}; f = id id};
+C = G 3;
+C' = G 3;
+x = C'.f (C.M.v);
+;; x = C.f (C'.M.v);  ;; but this is an error
+
+
+;; Appendix C: Impredicativity
+
+type OPT =
+{
+  type opt a;
+  none 'a : opt a;
+  some 'a : a -> opt a;
+  caseopt 'a 'b : opt a -> b -> (a -> b) -> b;
+};
+Opt :> OPT =
+{
+  type opt a = wrap (b : type) => b -> (a -> b) -> b;
+  none 'a = wrap (fun (b : type) (n : b) (s : a -> b) => n) : opt a;
+  some 'a x = wrap (fun (b : type) (n : b) (s : a -> b) => s x) : opt a;
+  caseopt 'a 'b xo = (unwrap xo : opt a) b;
+};

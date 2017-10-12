@@ -1,0 +1,307 @@
+log s = primitive "Text.print" (primitive "Text.++" (s, "\n"));
+
+do log "Bool";
+
+Bool =
+{
+  type bool = primitive "bool";
+  type t = bool;
+  true = primitive "true" ();
+  false = primitive "false" ();
+  not b = if b then false else true;
+  print b = primitive "Text.print" (if b then "true" else "false");
+};
+type bool = Bool.t;
+true = Bool.true;
+false = Bool.false;
+not = Bool.not;
+
+do log "Toplevel";
+
+(==) 'a (x : a, y : a) = primitive "==" a (x, y);
+(<>) 'a (x : a, y : a) = not (x == y);
+
+do log "Int";
+
+Int =
+{
+  type int = primitive "int";
+  type t = int;
+  (+) = primitive "Int.+";
+  (-) = primitive "Int.-";
+  (*) = primitive "Int.*";
+  (<) = primitive "Int.<";
+  (>) = primitive "Int.>";
+  (<=) = primitive "Int.<=";
+  (>=) = primitive "Int.>=";
+  print = primitive "Int.print";
+};
+type int = Int.t;
+(+) = Int.+;
+(-) = Int.-;
+(*) = Int.*;
+(<) = Int.<;
+(>) = Int.>;
+(<=) = Int.<=;
+(>=) = Int.>=;
+
+do log "Char";
+
+Char =
+{
+  type char = primitive "char";
+  type t = char;
+  toInt = primitive "Char.toInt";
+  fromInt = primitive "Char.fromInt";
+  print = primitive "Char.print";
+};
+type char = Char.t;
+
+do log "Text";
+
+Text =
+{
+  type text = primitive "text";
+  type t = text;
+  (++) = primitive "Text.++";
+  (<) = primitive "Text.<";
+  (>) = primitive "Text.>";
+  (<=) = primitive "Text.<=";
+  (>=) = primitive "Text.>=";
+  length t = primitive "Text.length" t;
+  sub t i = primitive "Text.sub" (t, i);
+  fromChar c = primitive "Text.fromChar" c;
+  print = primitive "Text.print";
+};
+type text = Text.t;
+(++) = Text.++;
+print = Text.print;
+
+do log "Opt";
+
+type OPT =
+{
+  type opt a;
+  none 'a : opt a;
+  some 'a : a -> opt a;
+  caseopt 'a 'b : opt a -> b -> (a -> b) -> b;
+};
+Opt :> OPT =
+{
+  type opt a = wrap (b : type) => b -> (a -> b) -> b;
+  none = wrap (fun (b : type) (n : b) (s : _ -> b) => n) : opt _;
+  some x = wrap (fun (b : type) (n : b) (s : _ -> b) => s x) : opt _;
+  caseopt xo = (unwrap xo : opt _) _;
+};
+include Opt;
+
+do log "Alt";
+
+type ALT =
+{
+  type alt a b;
+  left 'a 'b : a -> alt a b;
+  right 'a 'b : b -> alt a b;
+  casealt 'a 'b 'c : alt a b -> (a -> c) -> (b -> c) -> c;
+};
+Alt :> ALT =
+{
+  type alt a b = wrap (c : type) => (a -> c) -> (b -> c) -> c;
+  left x = wrap (fun (c : type) (l : _ -> c) (r : _ -> c) => l x) : alt _ _;
+  right x = wrap (fun (c : type) (l : _ -> c) (r : _ -> c) => r x) : alt _ _;
+  casealt xy = (unwrap xy : alt _ _) _;
+};
+include Alt;
+
+do log "List";
+
+type LIST_CORE =
+{
+  type list a;
+  nil 'a : list a;
+  cons 'a : a -> list a -> list a;
+  foldr 'a 'b : list a -> b -> (a -> b -> b) -> b;
+};
+type LIST =
+{
+  include LIST_CORE;
+  caselist 'a 'b : list a -> b -> (a -> list a -> b) -> b;
+  isNil 'a : list a -> bool;
+  head 'a : list a -> opt a;
+  tail 'a : list a -> opt (list a);
+  length 'a : list a -> int;
+  cat 'a : list a -> list a -> list a;
+  rev 'a : list a -> list a;
+  nth 'a : list a -> int -> opt a;
+  map 'a 'b : list a -> (a -> b) -> list b;
+  foldl 'a 'b : list a -> b -> (b -> a -> b) -> b;
+;;  foldr 'a 'b : list a -> b -> (a -> b -> b) -> b;
+};
+List :> LIST =
+{
+  include
+  {
+    type list a = wrap (b : type) => b -> (a -> b -> b) -> b;
+    nil = wrap (fun (b : type) (n : b) (c : _ -> b -> b) => n) : list _;
+    cons x xs =
+      wrap (fun (b : type) (n : b) (c : _ -> b -> b) =>
+        c x ((unwrap xs : list _) b n c)) : list _;
+    foldr xs = (unwrap xs : list _) _;
+  } :> LIST_CORE;
+  isNil xs = foldr xs true (fun _ _ => false);
+  head xs = foldr xs none (fun x _ => some x);
+  tail xs =
+    foldr xs (nil, none)
+      (fun x (acc : (_, _)) => (cons x (acc.1), some (acc.1))) .2;
+  caselist xs n c =
+    caseopt (head xs) n (fun x => caseopt (tail xs) n (fun xs' => c x xs'));
+  length xs = foldr xs 0 (fun _ n => n + 1);
+  cat xs1 xs2 = foldr xs1 xs2 cons;
+  rev xs = foldr xs nil (fun x xs => cat xs (cons x nil));
+  map xs f = foldr xs nil (fun x => cons (f x));
+  foldl xs x f = foldr (rev xs) x (fun x y => f y x);
+  nth xs n =
+    foldr xs (length xs - 1, none) (fun x (p : (_, _)) =>
+      (p.1 - 1, if p.1 == n then some x else p.2)
+    ) .2;
+};
+(;
+List :> LIST =
+{
+  type list a = (b : type) => b -> (a -> b -> b) -> b;
+  nil a b (n : b) (c : a -> b -> b) = n;
+  cons a (x : a) (xs : list a) b (n : b) (c : a -> b -> b) = c x (xs b n c);
+  foldr a b (xs : list a) = xs b : b -> (a -> b -> b) -> b;
+  isNil a (xs : list a) =
+    foldr a bool xs true (fun (_ : a) (_ : bool) => false);
+  head a (xs : list a) =
+    foldr a (opt a) xs (none a) (fun (x : a) (_ : opt a) => some a x);
+  tail a (xs : list a) =
+    let type t = (list a, opt (list a)) in
+    foldr a t xs
+      (nil a, none (list a))
+      (fun (x : a) (acc : t) => (cons a x (acc.1), some (list a) (acc.1)))
+    .2;
+  caselist a b (xs : list a) (n : b) (c : a -> list a -> b) =
+    caseopt a b (head a xs)
+      n
+      (fun (x : a) => caseopt (list a) b (tail a xs)
+        n
+        (fun (xs' : list a) => c x xs'));
+  length a (xs : list a) =
+    foldr a int xs 0 (fun (_ : a) (n : int) => n + 1);
+  cat a (xs1 : list a) (xs2 : list a) =
+    foldr a (list a) xs1 xs2 (cons a);
+  rev a (xs : list a) =
+    foldr a (list a) xs (nil a)
+      (fun (x : a) (xs : list a) => cat a xs (cons a x (nil a)));
+  map a b (xs : list a) (f : a -> b) =
+    foldr a (list b) xs (nil b) (fun (x : a) => cons b (f x));
+  foldl a b (xs : list a) (x : b) (f : b -> a -> b) =
+    foldr a b (rev a xs) x (fun (x : a) (y : b) => f y x);
+  nth a (xs : list a) (n : int) =
+    let (==) = equal int in
+    foldr a (type (int, opt a)) xs (length a xs - 1, none a)
+      (fun (x : a) (p : (int, opt a)) =>
+        (p.1 - 1, if p.1 == n then some a x else p.2 : opt a))
+    .2;
+};
+;)
+
+include List;
+
+do log "Set";
+
+type ORD =
+{
+  type t;
+  (<=) : (t, t) -> bool;
+};
+
+type SET =
+{
+  type set;
+  type elem;
+  type t = set;
+  empty : set;
+  add : elem -> set -> set;
+  mem : elem -> set -> bool;
+  card : set -> int;
+};
+
+Set (Elem : ORD) :> SET with (elem = Elem.t) =
+{
+  type elem = Elem.t;
+  type set = (int, elem -> bool);
+  type t = set;
+  empty = (0, fun (x : elem) => false);
+  card (s : set) = s._1;
+  mem (x : elem) (s : set) = s._2 x;
+  add (x : elem) (s : set) =
+    if mem x s then s
+    else (s._1 + 1, fun (y : elem) => x == y or mem y s) : set;
+};
+
+do log "Map";
+
+type MAP =
+{
+  type map a;
+  type key;
+  type t a = map a;
+  empty 'a : map a;
+  add 'a : key -> a -> map a -> map a;
+  lookup 'a : key -> map a -> opt a;
+};
+
+Map (Key : ORD) :> MAP with (key = Key.t) =
+{
+  type key = Key.t;
+  type map a = key -> opt a;
+  t = map;
+  empty x = none;
+  lookup x m = m x;
+  add x y m z = if x == z then some y else m x;
+};
+
+do log "Tests";
+
+TestSetAndMap =
+{
+  S = Set Int;
+  s = S.add 3 (S.add 5 (S.empty));
+  do Bool.print (S.mem 5 s); do print "\n";
+};
+
+
+local
+  f x = nil;
+  g 'a : () -> list a = f;
+in
+  G (type t) =
+  {
+    include {type u = t; v = nil} :> {type u; v : list u};
+    y = g ();
+    y1 = g () : list int;
+    y2 = g () : list t;
+    y3 = g () : list u;
+  };
+  y = G(type bool).y;
+  y1 = G(type bool).y : list int;
+  y2 = G(type bool).y : list bool;
+  M = G(type bool);
+;;  y3 = M.y : list (M.u);
+end;
+
+
+type int = primitive "int";
+type t = rec a => int;
+v = @t 3;
+n = v.@t;
+@t m = v;
+type u a = rec _ => a;
+w = @(u int) 4;
+@(u int) x = w;
+type p a b = (a,b);
+@(u (p _ _))(@t x, y) = @(u (p _ _)) (@t 6, 7);
+@(u _)(@t x', y') = @(u _) (@t 6, 7);

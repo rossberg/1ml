@@ -1,0 +1,102 @@
+;; Dynamically-Sized Functional Arrays
+;; After Russo 1998, Types for Modules, Section 7.3
+
+type ARRAY =
+{
+  type array a;
+  dim : int;
+  new 'a : a -> array a;
+  sub 'a : array a -> int -> a;
+  update 'a : array a -> int -> a -> array a;
+};
+
+ArrayZero =
+{
+  type array a = a;
+  dim = 1;
+  new x = x;
+  sub a i = a;
+  update a i x = x;
+};
+
+ArraySucc (A : ARRAY) =
+{
+  type array a = (A.array a, A.array a);
+  dim = 2 * A.dim;
+  new x = (A.new x, A.new x);
+  sub (a : array _) i = A.sub (if i % 2 == 0 then a.1 else a.2) (i / 2);
+  update (a : array _) i x =
+    if i % 2 == 0
+    then (A.update (a.1) (i / 2) x, a.2)
+    else (a.1, A.update (a.2) (i / 2) x);
+};
+
+MkArray = rec (mkArray : int -> ARRAY) => fun n =>
+  if n == 0 then ArrayZero else ArraySucc (mkArray (n - 1)) : ARRAY;
+
+printArray 't (A : ARRAY) (pr : t -> ()) a =
+  let loop = rec loop => fun i =>
+    if i == A.dim then print "\n"
+    else (pr (A.sub a i) ; print " " ; loop (i + 1))
+  in loop 0;
+
+A32 = MkArray 5;
+a = A32.new 0;
+do printArray A32 (Int.print) a;
+a = A32.update a 17 1;
+a = A32.update a 11 2;
+a = A32.update a 15 3;
+a = A32.update a 27 4;
+a = A32.update a 1 5;
+a = A32.update a 0 6;
+do printArray A32 (Int.print) a;
+
+
+
+;; Sieve of Erathostenes
+;; After Russo 1998, Types for Modules, Section 7.2
+
+type STREAM =
+{
+  type state;
+  start : state;
+  next : state -> state;
+  value : state -> int;
+};
+
+divides k n =
+  let loop = rec loop => fun i => (i * k == n) or ((i * k < n) and loop (i + 1))
+  in loop 1;
+
+sift (S : STREAM) :> STREAM =
+{
+  type state = S.state;
+  divisor = S.value (S.start);
+  filter = rec filter => fun s =>
+    if divides divisor (S.value s) then filter (S.next s) else s;
+  start = filter (S.start);
+  next s = filter (S.next s);
+  value = S.value;
+};
+
+Sieve :> STREAM =
+{
+  type state = wrap STREAM;
+  start = wrap
+  {
+    type state = int;
+    start = 2;
+    next n = n + 1;
+    value s = s;
+  } : state;
+  next (s : state) = let S = unwrap s : state in wrap sift S : state;
+  value (s : state) = let S = unwrap s : state in S.value (S.start);
+};
+
+nthstate = rec (nthstate : int -> Sieve.state) => fun n =>
+  if n == 0 then Sieve.start else Sieve.next (nthstate (n -1));
+nthprime n = Sieve.value (nthstate n);
+
+printprimes = rec loop => fun n =>
+  if n == 0 then () else (loop (n - 1) ; Int.print (nthprime n) ; print "\n");
+do printprimes 20;
