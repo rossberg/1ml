@@ -60,7 +60,7 @@ let rec count_newlines i s =
   else (if s.[i] == '\n' then 1 else 0) + count_newlines (i + 1) s
 
 let indent s =
-  let s' = String.make (String.length s + 2 * count_newlines 0 s + 2) ' ' in
+  let s' = Bytes.make (String.length s + 2 * count_newlines 0 s + 2) ' ' in
   let i = ref 0 in
   let i' = ref 2 in
   while !i < String.length s do
@@ -70,4 +70,4 @@ let indent s =
     i' := !i' + (j - !i) + 2;
     i := j
   done;
-  s'
+  Bytes.to_string s'
