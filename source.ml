@@ -66,7 +66,7 @@ let indent s =
   while !i < String.length s do
     let j =
       try String.index_from s !i '\n' + 1 with Not_found -> String.length s in
-    String.blit s !i s' !i' (j - !i);
+    Bytes.blit_string s !i s' !i' (j - !i);
     i' := !i' + (j - !i) + 2;
     i := j
   done;

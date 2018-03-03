@@ -31,7 +31,7 @@ Nevertheless, feedback on bugs or other comments are highly welcome (rossberg@mp
 
 == Building ==
 
-You need OCaml (since 4.02) and Make to build 1ML. Then just invoke:
+You need OCaml 4.02 (or higher) and Make to build 1ML. Then just invoke:
 
   make
 
