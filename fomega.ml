@@ -268,6 +268,7 @@ let rec norm_exp = function
 (* Equality *)
 
 let equal_row equal r1 r2 =
+  List.length r1 = List.length r2 &&
   List.for_all2 (fun (l1, z1) (l2, z2) -> l1 = l2 && equal z1 z2) r1 r2
 
 let rec equal_typ t1 t2 = equal_typ' (norm_typ t1) (norm_typ t2)

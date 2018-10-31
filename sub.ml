@@ -278,7 +278,7 @@ and sub_row env tr1 tr2 ps =
     Trace.sub (lazy ("[sub_row] l = " ^ l));
     let ts1, zs1, f =
       try sub_typ env (List.assoc l tr1) t2 ps with
-      | Not_found -> raise (Sub Missing)
+      | Not_found -> raise (Sub (Struct(l, Missing)))
       | Sub e -> raise (Sub (Struct(l, e)))
     in
     let rec psubst p t =

@@ -3,7 +3,7 @@
  *)
 
 let name = "1ML"
-let version = "0.1"
+let version = "0.2"
 
 let interactive_flag = ref false
 let trace_flag = ref false

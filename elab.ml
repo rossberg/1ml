@@ -237,21 +237,17 @@ Trace.debug (lazy ("[WithT] t2 = " ^ string_of_norm_typ t2));
     let ta = try project_typ ls t1 with Not_found ->
       error typ.at ("path " ^ quote (String.concat "." ls) ^ " unbound") in
 Trace.debug (lazy ("[WithT] ta = " ^ string_of_norm_typ ta));
-    let a =
-      match ta with
-      | TypT(ExT([], VarT(a, BaseK)))
-        when List.mem_assoc a aks1 && List.assoc a aks1 = BaseK -> a
-      | _ ->
-        error typ.at ("path " ^ quote (String.concat "." ls) ^
-          " does not denote an abstract type")
+    let bs = vars_typ ta in
+    let aks11 = List.filter (fun (a, k) -> not (VarSet.mem a bs)) aks1 in
+    let aks12 = List.filter (fun (a, k) -> VarSet.mem a bs) aks1 in
+Trace.debug (lazy ("[WithT] aks11 = " ^ string_of_norm_extyp (ExT(aks11, StrT []))));
+Trace.debug (lazy ("[WithT] aks12 = " ^ string_of_norm_extyp (ExT(aks12, StrT []))));
+    let ts, zs3, _ =
+      try sub_typ env t2 ta (varTs aks12) with Sub e -> error exp.at
+        ("refinement type does not match type component: " ^ Sub.string_of_error e)
     in
-    let t =
-      match t2 with
-      | TypT(ExT([], t)) -> t
-      | _ -> error exp.at ("expression does not denote a concrete type")
-    in
-    ExT(List.filter (fun (a', k) -> a' <> a) aks1, subst_typ [a, t] t1),
-    lift_warn typ.at t1 (add_typs aks1 env) (zs1 @ zs2)
+    ExT(aks11, subst_typ (subst aks12 ts) t1),
+    lift_warn typ.at t1 (add_typs aks11 env) (zs1 @ zs2 @ zs3)
 
 and elab_dec env dec l =
   Trace.elab (lazy ("[elab_dec] " ^ EL.label_of_dec dec));
@@ -515,7 +511,7 @@ Trace.debug (lazy ("[UnwrapE] s2 = " ^ string_of_norm_extyp s2));
       in
       (* TODO: syntactic restriction *)
       s1, Pure, lift_warn exp.at t1 (add_typs aks2 env) (zs1 @ zs2 @ zs3),
-      IL.AppE(f, IL.RecE(var.it, erase_typ t1, e))
+      IL.RecE(var.it, erase_typ t1, IL.AppE(f, e))
     | _ ->
       let t2, zs2 = elab_pathexp env1 exp1 l in
 Trace.debug (lazy ("[RecT] s1 = " ^ string_of_norm_extyp s1));

@@ -132,6 +132,52 @@ pickTable (size : int) (threshold : int) (HashMap : MAP) (TreeMap : MAP) =
   Table = if size > threshold then HashMap else TreeMap : MAP
 };
 
+(;
+type MONAD =
+{
+  type t a;
+  return (a : type) : a -> t a;
+  bind (a : type) (b : type) : t a -> (a -> t b) -> t b
+};
+type MONAD_TRANS =
+{
+  include MONAD;
+  type base a;
+  lift (a : type) : base a -> t a;
+  join (a : type) : t (base a) -> t a;
+};
+
+mapM (M : MONAD) (a : type) (b : type) (f : a -> b) (m : M.t a) : M.t b =
+  M.bind a b m (fun (x : a) => M.return b (f x));
+
+joinM (M : MONAD) (a : type) (mm : M.t (M.t a)) : M.t a =
+  M.bind (M.t a) a mm (fun (m : M.t a) => m);
+
+StackM (M : MONAD) =
+  rec (Loop : (n : int) -> (MONAD_TRANS with (base = M.t))) =>
+  fun (n : int) =>
+  if n == 1 then
+    { include M;
+      type base a = t a;
+      lift (a : type) (m : base a) = m;
+      join (a : type) (m : t (base a)) = joinM M a m;
+    }
+  else
+  (
+    let M' = Loop (n - 1) in
+    { type t a = M'.t (M.t a);
+      type base a = M.t a;
+      lift (a : type) (m : base a) = M'.return (M.t a) m;
+      join (a : type) (m : t (base a)) = M'.join (base a) m;
+      return (a : type) (x : a) = M'.return (M.t a) (M.return a x);
+      bind (a : type) (b : type) (m : t a) (f : a -> t b) =
+        M'.bind (M.t a) (M.t b) m
+          (fun (mx : M.t a) => M.bind a b mx
+            (fun (x : a) => f x));
+    }
+  ) : MONAD_TRANS with (type base a = M.t a);
+;)
+
 ;; Predicativity
 
 type T1 = type;
