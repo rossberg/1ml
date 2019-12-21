@@ -86,8 +86,6 @@ val norm_exp : exp -> exp (* raise Error *)
 
 val equal_typ : typ -> typ -> bool (* raise Error *)
 
-val force_typ : typ -> typ
-
 
 (* Checking *)
 

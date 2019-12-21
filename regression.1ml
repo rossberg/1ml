@@ -1,0 +1,23 @@
+Equivalence: {
+  type t a b;
+
+  transitivity 'a 'b 'c: t a b => t b c -> t a c;
+  reflexivity 'a: t a a;
+
+  symmetry 'a 'b: t a b -> t b a;
+
+  to   'a 'b: t a b => a -> b;
+  from 'a 'b: t a b => b -> a;
+} = {
+  type T a b = (type p _) -> p a -> p b;
+  type t a b = wrap T a b;
+  wr (eq: T _ _) = wrap eq: t _ _;
+  un eq = unwrap eq: t _ _;
+  transitivity 'a 'b 'c (ab: t a b) (bc: t b c) =
+    wr (fun (type p _) => un bc p << un ab p);
+  reflexivity = wr (fun (type p _) => id);
+  to eq a = un eq (fun (type x) => x) a;
+  from 'a 'b (eq: t a b) b = un eq (fun (type b) => type b -> a) id b;
+  symmetry 'a 'b (eq: t a b) : t b a =
+    wr (fun (type p _) => un eq (fun (type b) => type p b -> p a) id);
+};

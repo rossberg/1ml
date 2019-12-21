@@ -57,10 +57,6 @@ let tup_row xs = List.mapi (fun i x -> lab (i + 1), x) xs
 let lookup_lab l row =
   try List.assoc l row with Not_found -> raise (Error ("label " ^ l))
 
-let rec force_typ = function
-  | InferT(t', _) -> force_typ (Lazy.force t')
-  | t -> t
-
 let string_of_typ_fwd = ref (fun _ -> failwith "string_of_typ_fwd")
 let string_of_typ t = !string_of_typ_fwd t
 let string_of_kind_fwd = ref (fun _ -> failwith "string_of_kind_fwd")
@@ -361,25 +357,25 @@ let rec infer_exp env = function
     t
   | LamE(x, t, e) -> ArrT(t, infer_exp (add_val x t env) e)
   | AppE(e1, e2) ->
-    (match force_typ (infer_exp env e1) with
+    (match norm_typ (infer_exp env e1) with
     | ArrT(t2, t) -> check_exp env e2 t2 "AppE2"; t
     | _ -> raise (Error "AppE1")
     )
   | TupE(er) -> ProdT(infer_row infer_exp env er)
   | DotE(e, l) ->
-    (match force_typ (infer_exp env e) with
+    (match norm_typ (infer_exp env e) with
     | ProdT(tr) -> lookup_lab l tr
     | _ -> raise (Error "DotE1")
     )
   | GenE(a, k, e) -> AllT(a, k, infer_exp (add_typ a k env) e)
   | InstE(e, t) ->
-    (match force_typ (infer_exp env e) with
+    (match norm_typ (infer_exp env e) with
     | AllT(a, k, t') -> check_typ env t k "InstE"; subst_typ [a, t] t'
     | _ -> raise (Error "InstE")
     )
   | PackE(t, e, t') ->
     check_typ env t' BaseK "PackE";
-    (match force_typ t' with
+    (match norm_typ t' with
     | AnyT(a, k, t'') ->
       check_typ env t k "PackE1";
       check_exp env e (subst_typ [a, t] t'') "PackE2";
@@ -387,7 +383,7 @@ let rec infer_exp env = function
     | _ -> raise (Error "PackE")
     )
   | OpenE(e1, a, x, e2) ->
-    (match force_typ (infer_exp env e1) with
+    (match norm_typ (infer_exp env e1) with
     | AnyT(a1, k, t1) ->
       let t =
         infer_exp (add_val x (subst_typ [a1, VarT(a)] t1) (add_typ a k env)) e2

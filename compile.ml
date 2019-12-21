@@ -30,7 +30,7 @@ let rec compile_exp env = function
   | F.AppE(e1, e2) ->
     let e1', t1 = compile_exp env e1 in
     let e2', _ = compile_exp env e2 in
-    (match F.force_typ t1 with
+    (match F.norm_typ t1 with
     | F.ArrT(_, t) -> L.AppE(e1', e2'), t
     | _ -> assert false
     )
@@ -41,7 +41,7 @@ let rec compile_exp env = function
     F.ProdT(tr)
   | F.DotE(e, l) ->
     let e', t = compile_exp env e in
-    (match F.force_typ t with
+    (match F.norm_typ t with
     | F.ProdT(tr) ->
       let i, t' = lookup_row l 0 (sort_row tr) in
       L.DotE(e', i), t'
@@ -52,7 +52,7 @@ let rec compile_exp env = function
     e', F.AllT(a, k, t)
   | F.InstE(e, t) ->
     let e', t' = compile_exp env e in
-    (match F.force_typ t' with
+    (match F.norm_typ t' with
     | F.AllT(a, k, t'') -> e', F.subst_typ [a, t] t''
     | _ -> assert false
     )
@@ -61,7 +61,7 @@ let rec compile_exp env = function
     e', t'
   | F.OpenE(e1, a, x, e2) ->
     let e1', t1 = compile_exp env e1 in
-    (match F.force_typ t1 with
+    (match F.norm_typ t1 with
     | F.AnyT(a, k, t) ->
       let e2', t2 = compile_exp (F.add_val x t (F.add_typ a k env)) e2 in
       L.LetE(e1', x, e2'), t2
