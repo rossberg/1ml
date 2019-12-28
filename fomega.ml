@@ -395,7 +395,7 @@ let rec infer_exp env = function
     | _ -> raise (Error "OpenE")
     )
   | RollE(e, t) ->
-    check_typ env t BaseK "PackE";
+    check_typ env t BaseK "RollE";
     (match unroll_typ t with
     | Some t' ->
       check_exp env e t' "RollE";
