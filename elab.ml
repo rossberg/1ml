@@ -186,8 +186,8 @@ let rec elab_typ env typ l =
     elab_dec env dec l
 
   | EL.FunT(var, typ1, typ2, eff, impl) ->
-    let ExT(aks1, t1) as s1, zs1 = elab_typ env typ1 var.it in
-    let ExT(aks2, t2) as s2, zs2 =
+    let ExT(aks1, t1), zs1 = elab_typ env typ1 var.it in
+    let ExT(aks2, t2), zs2 =
       elab_typ (add_val var.it t1 (add_typs aks1 env)) typ2 l in
     (match elab_eff env eff, elab_impl env impl with
     | Impure, Explicit _ ->
