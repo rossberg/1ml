@@ -82,6 +82,8 @@ let join_eff p1 p2 =
   | Pure, Pure -> Pure
   | _, _ -> Impure
 
+let extyp_eff (ExT(aks, _)) = if aks = [] then Pure else Impure
+
 
 (* Rows *)
 

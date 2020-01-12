@@ -81,6 +81,7 @@ val rename_vars : (var -> var) -> (var * kind) list -> (var * kind) list
 (* Effects *)
 
 val join_eff : eff -> eff -> eff
+val extyp_eff : extyp -> eff
 
 
 (* Rows *)

@@ -410,7 +410,7 @@ Trace.debug (lazy ("[FunE] env =" ^ VarSet.fold (fun a s -> s ^ " " ^ a) (domain
       ("branch type does not match annotation: " ^ Sub.string_of_error e) in
     let _, zs4, f2 = try sub_extyp env s2 s [] with Sub e -> error exp2.at
       ("branch type does not match annotation: " ^ Sub.string_of_error e) in
-    s, join_eff p1 p2,
+    s, join_eff (join_eff p1 p2) (extyp_eff s),
     lift_warn exp.at t (add_typs aks env) (zs0 @ zs @ zs1 @ zs2 @ zs3 @ zs4),
     IL.IfE(ex, IL.AppE(f1, e1), IL.AppE(f2, e2))
 
@@ -483,7 +483,7 @@ Trace.debug (lazy ("[UnwrapE] s1 = " ^ string_of_norm_extyp s1));
 Trace.debug (lazy ("[UnwrapE] s2 = " ^ string_of_norm_extyp s2));
     let _, zs3, f = try sub_extyp env s1 s2 [] with Sub e -> error exp.at
       ("wrapped type does not match annotation: " ^ Sub.string_of_error e) in
-    s2, Impure, lift_warn exp.at t (add_typs aks env) (zs1 @ zs2 @ zs3),
+    s2, extyp_eff s2, lift_warn exp.at t (add_typs aks env) (zs1 @ zs2 @ zs3),
     IL.AppE(f, IL.DotE(ex, "wrap"))
 
   | EL.UnrollE(var, typ) ->

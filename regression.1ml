@@ -45,3 +45,18 @@ AmateurOptics = {
 
   e11 = e1 <-< e1;
 };
+
+;; Impure : () => {type t} = fun () =>
+;;   if true then {type t = int} else {type t = bool} : {type t};
+
+ImpureIf : () -> {type t} = fun () =>
+  if true then {type t = int} else {type t = bool} : {type t};
+
+PureIf : () => ('a => a => a) = fun () =>
+  if true then id else id : 'a => a => a;
+
+Pure : () => {type t = bool; existentials: t} = fun () =>
+  {type t = bool; existentials = false} :> {type t = bool; existentials: t};
+
+;; Impure : () => {type t; existentials: t} = fun () =>
+;;   {type t = bool; existentials = true} :> {type t = bool; existentials: t};
