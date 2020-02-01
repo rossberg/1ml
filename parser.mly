@@ -25,7 +25,7 @@ let ati i =
 let parse_error s = raise (Source.Error (Source.nowhere_region, s))
 %}
 
-%token TRUE FALSE HOLE PRIMITIVE
+%token HOLE PRIMITIVE
 %token FUN REC LET LOCAL IN DO WRAP UNWRAP TYPE INCLUDE END
 %token IF THEN ELSE OR AND AS
 %token EQUAL COLON SEAL ARROW DARROW
