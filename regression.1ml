@@ -1,3 +1,7 @@
+record_inference x = x.works_a_little;
+
+;;
+
 Equivalence: {
   type t a b;
 

@@ -422,7 +422,7 @@ Trace.debug (lazy ("[FunE] env =" ^ VarSet.fold (fun a s -> s ^ " " ^ a) (domain
       | InferT(z) ->
         (* TODO: row polymorphism *)
         let t, zs = guess_typ (Env.domain_typ (add_typs aks env)) BaseK in
-        let tr = [l, t] in
+        let tr = [var.it, t] in
         resolve_always z (StrT(tr)); tr, zs
       | _ -> error exp1.at "expression is not a structure"
     in
