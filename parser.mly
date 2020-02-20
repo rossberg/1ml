@@ -129,8 +129,6 @@ attyp :
     { PrimT($2)@@at() }
   | TYPE
     { TypT@@at() }
-  | HOLE
-    { HoleT@@at() }
   | LBRACE dec RBRACE
     { StrT($2)@@at() }
   | LPAR RPAR
