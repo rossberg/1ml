@@ -175,14 +175,14 @@ typlist :
 ;
 
 atdec :
-  | head typparamlist COLON typ
+  | name typparamlist COLON typ
     { VarD($1, funT($2, $4, Pure@@ati 2)@@span[ati 2; ati 4])@@at() }
-  | TYPE head typparamlist
+  | TYPE name typparamlist
     { VarD($2, funT($3, TypT@@ati 1, Pure@@ati 3)@@at())@@at() }
-  | head typparamlist EQUAL exp
+  | name typparamlist EQUAL exp
     { VarD($1, funT($2, EqT($4)@@ati 4, Pure@@ati 3)@@span[ati 2; ati 4])
         @@at() }
-  | TYPE head typparamlist EQUAL typ
+  | TYPE name typparamlist EQUAL typ
     { VarD($2, funT($3, EqT(TypE($5)@@ati 5)@@ati 5, Pure@@ati 4)@@at())
         @@at() }
   | INCLUDE typ
