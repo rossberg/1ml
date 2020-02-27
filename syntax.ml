@@ -281,10 +281,10 @@ let wrapP(p, t2) =
   | None -> Some t2
   | Some t1 -> Some (AsT(t2, WrapT(t1)@@t1.at)@@span[p.at; t2.at])
 
-let strP(xps) =
+let strP(xps, region) =
   match xps with
   | [] ->
-    EmptyB@@nowhere_region, Some (StrT(EmptyD@@nowhere_region)@@nowhere_region)
+    EmptyB@@region, Some (StrT(EmptyD@@region)@@region)
   | xp::_ ->
     let b, d =
       List.fold_right (fun xp (b, d) ->
@@ -296,7 +296,7 @@ let strP(xps) =
       ) xps (EmptyB@@xp.at, EmptyD@@xp.at)
     in b, Some (StrT(d)@@d.at)
 
-let rec tupP(ps) = strP(tupP' 1 ps)
+let rec tupP(ps, region) = strP(tupP' 1 ps, region)
 and tupP' n = function
   | [] -> []
   | p::ps -> (((index n)@@p.at, p)@@p.at) :: tupP' (n + 1) ps

@@ -376,11 +376,11 @@ atpat :
   | head
     { if $1.it = "_" then holeP@@at() else varP($1)@@at() }
   | LBRACE decon RBRACE
-    { strP($2)@@at() }
+    { strP($2, at())@@at() }
   | LPAR RPAR
-    { strP([])@@at() }
+    { strP([], at())@@at() }
   | LPAR patlist RPAR
-    { match $2 with [p] -> p | ps -> tupP(ps)@@at() }
+    { match $2 with [p] -> p | ps -> tupP(ps, at())@@at() }
   | LPAR TYPE name typparamlist RPAR
     { annotP(varP($3.it@@ati 3)@@ati 3,
         funT($4, TypT@@ati 2, Pure@@ati 2)@@at())@@at() }
