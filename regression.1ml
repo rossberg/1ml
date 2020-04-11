@@ -21,3 +21,23 @@ Equivalence: {
   symmetry 'a 'b (eq: t a b) : t b a =
     wr (fun (type p _) => un eq (fun (type b) => type p b -> p a) id);
 };
+
+;;
+
+AmateurOptics = {
+  type FUNCTOR = {
+    type t a;
+    map 'a 'b: (a -> b) => t a -> t b;
+  };
+
+  type lens a b s t = (F: FUNCTOR) => (a -> F.t b) => s -> F.t t;
+
+  ;; NOTE: It is important that the following do not have more type annotations,
+  ;; because the bug that this triggered was due to treatment of inferred types.
+
+  (<-<) (l1: lens _ _ _ _, l2: lens _ _ _ _) (F: FUNCTOR) toF = l1 F (l2 F toF);
+
+  e1 (F: FUNCTOR) abF (l, r) = F.map (fun l => (l, r)) (abF l);
+
+  e11 = e1 <-< e1;
+};
