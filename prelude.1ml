@@ -29,9 +29,15 @@ true = Bool.true;
 false = Bool.false;
 not = Bool.not;
 
-(==) 'a (x : a, y : a) = primitive "==" a (x, y);
-(<>) 'a (x : a, y : a) = not (x == y);
+PolyEq (type t) = {
+  (==) (x : t, y : t) = primitive "==" t (x, y);
+  (<>) (x : t, y : t) = not (x == y);
+};
 
+Bool = {
+  include Bool;
+  include PolyEq t;
+};
 
 ;; Int
 
@@ -49,6 +55,7 @@ Int =
   (<=) = primitive "Int.<=";
   (>=) = primitive "Int.>=";
   print = primitive "Int.print";
+  include PolyEq t;
 };
 type int = Int.t;
 (+) = Int.+;
@@ -60,6 +67,8 @@ type int = Int.t;
 (>) = Int.>;
 (<=) = Int.<=;
 (>=) = Int.>=;
+(==) = Int.==;
+(<>) = Int.<>;
 
 
 ;; Char
@@ -71,6 +80,7 @@ Char =
   toInt = primitive "Char.toInt";
   fromInt = primitive "Char.fromInt";
   print = primitive "Char.print";
+  include PolyEq t;
 };
 type char = Char.t;
 
@@ -90,6 +100,7 @@ Text =
   sub t i = primitive "Text.sub" (t, i);
   fromChar c = primitive "Text.fromChar" c;
   print = primitive "Text.print";
+  include PolyEq t;
 };
 type text = Text.t;
 (++) = Text.++;
@@ -215,6 +226,7 @@ type SET =
 Set (Elem : ORD) :> SET with (elem = Elem.t) =
 {
   type elem = Elem.t;
+  (==) (x, y) = let include Elem in (x <= y) and (y <= x);
   type set = (int, elem -> bool);
   type t = set;
   empty = (0, fun (x : elem) => false);
@@ -241,6 +253,7 @@ type MAP =
 Map (Key : ORD) :> MAP with (key = Key.t) =
 {
   type key = Key.t;
+  (==) (x, y) = let include Key in (x <= y) and (y <= x);
   type map a = key -> opt a;
   t = map;
   empty x = none;
