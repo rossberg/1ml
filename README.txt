@@ -267,7 +267,7 @@ or even more explicitly,
 
 Generalisation can also take place as part of subtyping (a.k.a. signature matching), e.g. in the following example:
 
-  f (id : ‘a => id -> id) = (id 5, id “”)
+  f (id : ‘a => a -> a) = (id 5, id “”)
   p = f (fun x => x)
 
 This also shows that implicit functions naturally are first-class values.

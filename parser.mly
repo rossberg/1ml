@@ -25,7 +25,7 @@ let ati i =
 let parse_error s = raise (Source.Error (Source.nowhere_region, s))
 %}
 
-%token TRUE FALSE HOLE PRIMITIVE
+%token HOLE PRIMITIVE
 %token FUN REC LET LOCAL IN DO WRAP UNWRAP TYPE INCLUDE END
 %token IF THEN ELSE OR AND AS
 %token EQUAL COLON SEAL ARROW DARROW
@@ -129,8 +129,6 @@ attyp :
     { PrimT($2)@@at() }
   | TYPE
     { TypT@@at() }
-  | HOLE
-    { HoleT@@at() }
   | LBRACE dec RBRACE
     { StrT($2)@@at() }
   | LPAR RPAR
@@ -177,14 +175,14 @@ typlist :
 ;
 
 atdec :
-  | head typparamlist COLON typ
+  | name typparamlist COLON typ
     { VarD($1, funT($2, $4, Pure@@ati 2)@@span[ati 2; ati 4])@@at() }
-  | TYPE head typparamlist
+  | TYPE name typparamlist
     { VarD($2, funT($3, TypT@@ati 1, Pure@@ati 3)@@at())@@at() }
-  | head typparamlist EQUAL exp
+  | name typparamlist EQUAL exp
     { VarD($1, funT($2, EqT($4)@@ati 4, Pure@@ati 3)@@span[ati 2; ati 4])
         @@at() }
-  | TYPE head typparamlist EQUAL typ
+  | TYPE name typparamlist EQUAL typ
     { VarD($2, funT($3, EqT(TypE($5)@@ati 5)@@ati 5, Pure@@ati 4)@@at())
         @@at() }
   | INCLUDE typ
@@ -378,11 +376,11 @@ atpat :
   | head
     { if $1.it = "_" then holeP@@at() else varP($1)@@at() }
   | LBRACE decon RBRACE
-    { strP($2)@@at() }
+    { strP($2, at())@@at() }
   | LPAR RPAR
-    { strP([])@@at() }
+    { strP([], at())@@at() }
   | LPAR patlist RPAR
-    { match $2 with [p] -> p | ps -> tupP(ps)@@at() }
+    { match $2 with [p] -> p | ps -> tupP(ps, at())@@at() }
   | LPAR TYPE name typparamlist RPAR
     { annotP(varP($3.it@@ati 3)@@ati 3,
         funT($4, TypT@@ati 2, Pure@@ati 2)@@at())@@at() }

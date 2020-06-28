@@ -263,13 +263,15 @@ let asP(p1, p2) =
 
 let annotP(p, t2) =
   let b, to1 = p.it in
-  match b.it with
-  | EmptyB | VarB(_, {it = VarE({it = "$"})}) -> b, Some t2
-  | _ ->
-    let t =
-      match asTopt(to1, Some t2) with Some t -> t | None -> assert false in
-    patB(p, annotE(VarE("$"@@t2.at)@@t2.at, t)@@t2.at)@@span[p.at; t2.at],
-    Some t
+  let t = match asTopt(to1, Some t2) with Some t -> t | None -> assert false in
+  let toE e = annotE(e, t)@@t2.at in
+  let b' =
+    match b.it with
+    | EmptyB -> doB(toE(VarE("$"@@b.at)@@b.at))
+    | VarB(x, e) -> VarB(x, toE e)
+    | _ ->
+      letB(VarB("$"@@b.at, toE(VarE("$"@@b.at)@@b.at))@@b.at, b.it@@p.at) in
+  b'@@span[p.at; t2.at], Some t
 
 let wrapP(p, t2) =
   let _, to1 = p.it in
@@ -281,10 +283,10 @@ let wrapP(p, t2) =
   | None -> Some t2
   | Some t1 -> Some (AsT(t2, WrapT(t1)@@t1.at)@@span[p.at; t2.at])
 
-let strP(xps) =
+let strP(xps, region) =
   match xps with
   | [] ->
-    EmptyB@@nowhere_region, Some (StrT(EmptyD@@nowhere_region)@@nowhere_region)
+    EmptyB@@region, Some (StrT(EmptyD@@region)@@region)
   | xp::_ ->
     let b, d =
       List.fold_right (fun xp (b, d) ->
@@ -296,7 +298,7 @@ let strP(xps) =
       ) xps (EmptyB@@xp.at, EmptyD@@xp.at)
     in b, Some (StrT(d)@@d.at)
 
-let rec tupP(ps) = strP(tupP' 1 ps)
+let rec tupP(ps, region) = strP(tupP' 1 ps, region)
 and tupP' n = function
   | [] -> []
   | p::ps -> (((index n)@@p.at, p)@@p.at) :: tupP' (n + 1) ps

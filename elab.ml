@@ -186,8 +186,8 @@ let rec elab_typ env typ l =
     elab_dec env dec l
 
   | EL.FunT(var, typ1, typ2, eff, impl) ->
-    let ExT(aks1, t1) as s1, zs1 = elab_typ env typ1 var.it in
-    let ExT(aks2, t2) as s2, zs2 =
+    let ExT(aks1, t1), zs1 = elab_typ env typ1 var.it in
+    let ExT(aks2, t2), zs2 =
       elab_typ (add_val var.it t1 (add_typs aks1 env)) typ2 l in
     (match elab_eff env eff, elab_impl env impl with
     | Impure, Explicit _ ->
@@ -410,7 +410,7 @@ Trace.debug (lazy ("[FunE] env =" ^ VarSet.fold (fun a s -> s ^ " " ^ a) (domain
       ("branch type does not match annotation: " ^ Sub.string_of_error e) in
     let _, zs4, f2 = try sub_extyp env s2 s [] with Sub e -> error exp2.at
       ("branch type does not match annotation: " ^ Sub.string_of_error e) in
-    s, join_eff p1 p2,
+    s, join_eff (join_eff p1 p2) (extyp_eff s),
     lift_warn exp.at t (add_typs aks env) (zs0 @ zs @ zs1 @ zs2 @ zs3 @ zs4),
     IL.IfE(ex, IL.AppE(f1, e1), IL.AppE(f2, e2))
 
@@ -422,7 +422,7 @@ Trace.debug (lazy ("[FunE] env =" ^ VarSet.fold (fun a s -> s ^ " " ^ a) (domain
       | InferT(z) ->
         (* TODO: row polymorphism *)
         let t, zs = guess_typ (Env.domain_typ (add_typs aks env)) BaseK in
-        let tr = [l, t] in
+        let tr = [var.it, t] in
         resolve_always z (StrT(tr)); tr, zs
       | _ -> error exp1.at "expression is not a structure"
     in
@@ -469,7 +469,9 @@ Trace.debug (lazy ("[AppE] ts = " ^ String.concat ", " (List.map string_of_norm_
   | EL.UnwrapE(var, typ) ->
     let aks, t, s2, zs2 =
       match elab_typ env typ l with
-      | ExT([], WrapT(ExT(aks, t) as s2)), zs2 -> aks, t, s2, zs2
+      | ExT([], WrapT(s2)), zs2 ->
+        let ExT(aks, t) as s2 = freshen_extyp env s2 in
+        aks, t, s2, zs2
       | _ -> error typ.at "non-wrapped type for unwrap" in
     let t1, zs1, ex = elab_instvar env var in
     let s1 =
@@ -483,7 +485,7 @@ Trace.debug (lazy ("[UnwrapE] s1 = " ^ string_of_norm_extyp s1));
 Trace.debug (lazy ("[UnwrapE] s2 = " ^ string_of_norm_extyp s2));
     let _, zs3, f = try sub_extyp env s1 s2 [] with Sub e -> error exp.at
       ("wrapped type does not match annotation: " ^ Sub.string_of_error e) in
-    s2, Impure, lift_warn exp.at t (add_typs aks env) (zs1 @ zs2 @ zs3),
+    s2, extyp_eff s2, lift_warn exp.at t (add_typs aks env) (zs1 @ zs2 @ zs3),
     IL.AppE(f, IL.DotE(ex, "wrap"))
 
   | EL.UnrollE(var, typ) ->

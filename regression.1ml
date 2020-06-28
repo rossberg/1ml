@@ -1,0 +1,68 @@
+record_inference x = x.works_a_little;
+
+;;
+
+Equivalence: {
+  type t a b;
+
+  transitivity 'a 'b 'c: t a b => t b c -> t a c;
+  reflexivity 'a: t a a;
+
+  symmetry 'a 'b: t a b -> t b a;
+
+  to   'a 'b: t a b => a -> b;
+  from 'a 'b: t a b => b -> a;
+} = {
+  type T a b = (type p _) -> p a -> p b;
+  type t a b = wrap T a b;
+  wr (eq: T _ _) = wrap eq: t _ _;
+  un eq = unwrap eq: t _ _;
+  transitivity 'a 'b 'c (ab: t a b) (bc: t b c) =
+    wr (fun (type p _) => un bc p << un ab p);
+  reflexivity = wr (fun (type p _) => id);
+  to eq a = un eq (fun (type x) => x) a;
+  from 'a 'b (eq: t a b) b = un eq (fun (type b) => type b -> a) id b;
+  symmetry 'a 'b (eq: t a b) : t b a =
+    wr (fun (type p _) => un eq (fun (type b) => type p b -> p a) id);
+};
+
+;;
+
+type B = wrap type => type;
+
+both f g (x: type) = (unwrap f: B) ((unwrap g: B) x);
+
+;;
+
+AmateurOptics = {
+  type FUNCTOR = {
+    type t a;
+    map 'a 'b: (a -> b) => t a -> t b;
+  };
+
+  type lens a b s t = (F: FUNCTOR) => (a -> F.t b) => s -> F.t t;
+
+  ;; NOTE: It is important that the following do not have more type annotations,
+  ;; because the bug that this triggered was due to treatment of inferred types.
+
+  (<-<) (l1: lens _ _ _ _, l2: lens _ _ _ _) (F: FUNCTOR) toF = l1 F (l2 F toF);
+
+  e1 (F: FUNCTOR) abF (l, r) = F.map (fun l => (l, r)) (abF l);
+
+  e11 = e1 <-< e1;
+};
+
+;; Impure : () => {type t} = fun () =>
+;;   if true then {type t = int} else {type t = bool} : {type t};
+
+ImpureIf : () -> {type t} = fun () =>
+  if true then {type t = int} else {type t = bool} : {type t};
+
+PureIf : () => ('a => a => a) = fun () =>
+  if true then id else id : 'a => a => a;
+
+Pure : () => {type t = bool; existentials: t} = fun () =>
+  {type t = bool; existentials = false} :> {type t = bool; existentials: t};
+
+;; Impure : () => {type t; existentials: t} = fun () =>
+;;   {type t = bool; existentials = true} :> {type t = bool; existentials: t};

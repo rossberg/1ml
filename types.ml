@@ -82,6 +82,8 @@ let join_eff p1 p2 =
   | Pure, Pure -> Pure
   | _, _ -> Impure
 
+let extyp_eff (ExT(aks, _)) = if aks = [] then Pure else Impure
+
 
 (* Rows *)
 
@@ -180,7 +182,10 @@ let rec contains_typ a = function
   | TupT(r) -> contains_row a r
   | DotT(t, l) -> contains_typ a t
   | RecT(ak, t) -> not (contains_bind a [ak]) && contains_typ a t
-  | InferT(z) -> false
+  | InferT(z) ->
+    match !z with
+    | Det t -> contains_typ a t
+    | Undet _ -> true
 
 and contains_extyp a = function
   | ExT(aks, t) -> not (contains_bind a aks) && contains_typ a t
