@@ -28,6 +28,12 @@ Equivalence: {
 
 ;;
 
+type B = wrap type => type;
+
+both f g (x: type) = (unwrap f: B) ((unwrap g: B) x);
+
+;;
+
 AmateurOptics = {
   type FUNCTOR = {
     type t a;

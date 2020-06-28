@@ -469,7 +469,9 @@ Trace.debug (lazy ("[AppE] ts = " ^ String.concat ", " (List.map string_of_norm_
   | EL.UnwrapE(var, typ) ->
     let aks, t, s2, zs2 =
       match elab_typ env typ l with
-      | ExT([], WrapT(ExT(aks, t) as s2)), zs2 -> aks, t, s2, zs2
+      | ExT([], WrapT(s2)), zs2 ->
+        let ExT(aks, t) as s2 = freshen_extyp env s2 in
+        aks, t, s2, zs2
       | _ -> error typ.at "non-wrapped type for unwrap" in
     let t1, zs1, ex = elab_instvar env var in
     let s1 =
